@@ -658,6 +658,41 @@ func (v *Object) SetProperty(name string, value interface{}) error {
 	return nil
 }
 
+// GetProperty is a wrapper around g_object_get_property().
+func (v *Object) GetData(key string) (interface{}, error) {
+	cstr := C.CString(key)
+	defer C.free(unsafe.Pointer(cstr))
+
+	t, err := v.GetPropertyType(key)
+	if err != nil {
+		return nil, err
+	}
+
+	p, err := ValueInit(t)
+	if err != nil {
+		return nil, errors.New("unable to allocate value")
+	}
+	C.g_object_get_data(v.GObject, (*C.gchar)(cstr), p.native())
+	return p.GoValue()
+}
+
+// SetProperty is a wrapper around g_object_set_property().
+func (v *Object) SetData(key string, data interface{}) error {
+	cstr := C.CString(key)
+	defer C.free(unsafe.Pointer(cstr))
+
+	if _, ok := data.(Object); ok {
+		data = data.(Object).GObject
+	}
+
+	p, err := GValue(data)
+	if err != nil {
+		return errors.New("Unable to perform type conversion")
+	}
+	C.g_object_set_data(v.GObject, (*C.gchar)(cstr), p.native())
+	return nil
+}
+
 // pointerVal attempts to return an unsafe.Pointer for value.
 // Not all types are understood, in which case a nil Pointer
 // is returned.
